@@ -6,12 +6,11 @@ Propósito: Inserta un nuevo adicional de seguro en la tabla adicionales_paquete
 Parámetros:
 id_paqueteS: ID del paquete.
 id_seguroS: ID del seguro.
-precio: Precio del adicional.
 
 Lógica: Verifica la existencia del paquete y seguro antes de insertar el adicional.
 
 */
-CREATE or replace PROCEDURE sp_insertar_adicionales_seguro( id_paqueteS INTEGER,id_seguroS INTEGER,precio numeric(40,2))
+CREATE or replace PROCEDURE sp_insertar_adicionales_seguro( id_paqueteS INTEGER,id_seguroS INTEGER)
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -22,10 +21,9 @@ BEGIN
         RAISE EXCEPTION 'El paquete con la ID % no existe', id_seguro;
     END IF;
 
-    INSERT INTO adicionales_paquete( id_seguro,id_reserva,  precio)
-    VALUES (id_paqueteS, id_reserva, precio);
+    INSERT INTO adicionales_paquete( id_seguro,id_reserva)
+    VALUES (id_paqueteS, id_reserva);
 END;$$;
-
 
 /*
 sp_modificar_adicionales_seguro
