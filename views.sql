@@ -300,25 +300,31 @@ Vista: vw_clientes_calificaciones
 Propósito: Muestra las calificaciones dadas por los clientes.
 
 Columnas:
-dni: DNI del cliente.
-nombre: Nombre del cliente.
-puntaje: Puntaje dado.
-id_servicio: ID del servicio calificado.
+Cliente: Nombre del cliente.
+Puntaje: Puntaje del servicio.
+Detalles_Servicio: Detalle del servicio calificado.
 
 */
-CREATE VIEW vw_clientes_calificaciones AS
 
+CREATE OR REPLACE VIEW "ISFPP2024".vw_clientes_calificaciones AS
 SELECT
-    c.dni,
-	c.nombre,
-    cal.puntaje,
-    cal.id_servicio
+    c.nombre AS Cliente,
+    cal.puntaje AS Puntaje,
+    vs.detalles AS Detalles_Servicio
 FROM
-    calificaciones cal
+    "ISFPP2024".calificaciones cal
 JOIN
-    clientes c
+    "ISFPP2024".clientes c
 ON
-    cal.id_cliente = c.dni;
+    cal.id_cliente = c.dni
+JOIN
+    "ISFPP2024".vw_servicios vs
+ON
+    cal.id_servicio = vs.id_del_servicio;
+
+ALTER TABLE "ISFPP2024".vw_clientes_calificaciones
+    OWNER TO estudiante;
+
 
 /*
 Vista: vw_servicios_alojamientos
@@ -329,14 +335,15 @@ Columnas:
 nombre: Nombre del alojamiento.
 id_alojamiento: ID del alojamiento.
 */
-CREATE VIEW vw_servicios_alojamientos AS
 
-SELECT
-    a.nombre,
-    s.id_alojamiento
-FROM
-    servicios s
-JOIN
-    alojamientos a
-ON
-    s.id_alojamiento = a.id_alojamiento;
+CREATE OR REPLACE VIEW "ISFPP2024".vw_servicios_alojamientos
+ AS
+ SELECT s.nombre as nombre_Servicio,
+    a.nombre as nombre_Alojamiento,
+	a.ubicacion as ubicacion_Alojamiento,
+	a.comodidades as comodidades_Alojamiento
+   FROM "ISFPP2024".servicios s
+     JOIN "ISFPP2024".alojamientos a ON s.id_alojamiento = a.id_alojamiento;
+
+ALTER TABLE "ISFPP2024".vw_servicios_alojamientos
+    OWNER TO estudiante;
