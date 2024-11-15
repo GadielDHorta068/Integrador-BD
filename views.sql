@@ -138,12 +138,12 @@ Propósito: Muestra todos los servicios disponibles.
 Columnas:
 Id_del_servicio: ID del servicio.
 tipo_de_servicio: Tipo de servicio.
-id_del_tipo_de_servicio: ID del tipo de servicio.
+id_tipo_dservicio: ID del tipo de servicio.
+detalle: detalles sobre el tipo de servicio.
 Estado_del_servicio: Estado del servicio.
 precio_del_servicio: Precio del servicio.
 personal_del_servicio: Personal asignado al servicio.
 */
-CREATE VIEW vw_servicios AS
 CREATE OR REPLACE VIEW vw_servicios AS
 SELECT 
     s.id_servicio AS Id_del_servicio,
