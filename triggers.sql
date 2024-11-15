@@ -182,7 +182,34 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
 CREATE TRIGGER tr_eliminar_servicios_sin_tipo_servicio
 BEFORE UPDATE ON servicios
 FOR EACH ROW
 EXECUTE FUNCTION eliminar_servicios_sin_tipo_servicio();
+/*trigger que le asigna el precio a itemproducto cuando se crea o modifica una fila
+*/
+
+CREATE OR REPLACE FUNCTION agregar_precio_paquete_servicio()
+RETURNS TRIGGER AS $$
+DECLARE
+ nuevo_precio NUMERIC(40,2);
+BEGIN
+
+ 	     SELECT precio INTO nuevo_precio
+    FROM servicios
+    WHERE id_servicio = NEW.id_servicio
+    LIMIT 1;  -- Asegurarse de obtener solo un resultado
+
+    -- Actualizar el precio en item_paquetes
+    UPDATE item_paquete
+    SET precio = nuevo_precio 
+    WHERE id_servicio = NEW.id_servicio;
+  	 RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_agregar_item_servicio
+AFTER INSERT OR UPDATE On item_paquete
+FOR EACH ROW
+EXECUTE FUNCTION agregar_precio_paquete_servicio();
