@@ -16,8 +16,8 @@ Generación de Triggers, Vistas y Consultas SQL representativas
 
 ## Presentación informe final. 
 **Debe contener**:
--Carátula.
--Introducción: indicando los requerimientos y alcance de tareas del grupo.
+- Carátula.
+- Introducción: indicando los requerimientos y alcance de tareas del grupo.
 - Diagrama de clases general.
 - Diseño: consideraciones, decisiones y/o limitaciones del sistema.
 - Implementación: Detalle y explicación de cada tabla, función, procedimiento,
