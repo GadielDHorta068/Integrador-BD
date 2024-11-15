@@ -118,10 +118,10 @@ SELECT p.dni_personal AS Dni_del_personal,
 		s.nombre AS tipo_de_servicio,
 		CASE
 			WHEN s.id_alojamiento IS NOT NULL THEN s.id_alojamiento::VARCHAR
-           	WHEN s.id_vehiculo_alquiler IS NOT NULL THEN s.id_vehiculo_alquiler::VARCHAR
-           	WHEN s.id_transporte IS NOT NULL THEN s.id_transporte::VARCHAR
-           	WHEN s.id_excursion IS NOT NULL THEN s.id_excursion::VARCHAR
-			ELSE NULL
+	           	WHEN s.id_vehiculo_alquiler IS NOT NULL THEN s.id_vehiculo_alquiler::VARCHAR
+	           	WHEN s.id_transporte IS NOT NULL THEN s.id_transporte::VARCHAR
+	           	WHEN s.id_excursion IS NOT NULL THEN s.id_excursion::VARCHAR
+		ELSE NULL
 		END AS id_del_tipo_de_servicio,
 		s.status AS Estado_del_servicio,
 		s.precio AS precio_del_servicio
@@ -144,20 +144,61 @@ precio_del_servicio: Precio del servicio.
 personal_del_servicio: Personal asignado al servicio.
 */
 CREATE VIEW vw_servicios AS
-SELECT s.id_servicio AS Id_del_servicio,
-		s.nombre AS tipo_de_servicio,
-		CASE
-			WHEN s.id_alojamiento IS NOT NULL THEN s.id_alojamiento::VARCHAR
-           	WHEN s.id_vehiculo_alquiler IS NOT NULL THEN s.id_vehiculo_alquiler::VARCHAR
-           	WHEN s.id_transporte IS NOT NULL THEN s.id_transporte::VARCHAR
-           	WHEN s.id_excursion IS NOT NULL THEN s.id_excursion::VARCHAR
-			ELSE NULL
-		END AS id_del_tipo_de_servicio,
-		s.status AS Estado_del_servicio,
-		s.precio AS precio_del_servicio,
-		s.dni_personal AS personal_del_servicio
-FROM servicios s
-ORDER BY s.id_servicio, s.nombre, id_del_tipo_de_servicio
+CREATE OR REPLACE VIEW vw_servicios AS
+SELECT 
+    s.id_servicio AS Id_del_servicio,
+    s.nombre AS tipo_de_servicio,
+    CASE 
+        WHEN s.id_alojamiento IS NOT NULL THEN s.id_alojamiento::VARCHAR
+        WHEN s.id_vehiculo_alquiler IS NOT NULL THEN s.id_vehiculo_alquiler::VARCHAR
+        WHEN s.id_transporte IS NOT NULL THEN s.id_transporte::VARCHAR
+        WHEN s.id_excursion IS NOT NULL THEN s.id_excursion::VARCHAR
+        ELSE NULL
+    END AS id_tipo_servicio,
+    CASE
+        WHEN s.id_alojamiento IS NOT NULL THEN
+            CONCAT('Nombre: ', a.nombre, 
+                   ', Capacidad: ', a.capacidad_personas, 
+                   ', Precio/Dia: ', a.precio_por_dia,
+                   ', Ubicacion: ', d.nombre)
+        WHEN s.id_vehiculo_alquiler IS NOT NULL THEN
+            CONCAT('Tipo: ', tv.categoria,  -- utilizando tipo_vehiculo
+                   ', Ubicacion: ', d.nombre,
+                   ', Modelo: ', v.modelo,
+                   ', Capacidad: ', v.capacidad_personas,
+                   ', Kilometraje: ', v.kilometraje)
+        WHEN s.id_transporte IS NOT NULL THEN 
+            CONCAT('Tipo: ', tv.categoria,  -- utilizando tipo_vehiculo
+                   ', Origen: ', d.nombre,
+                   ', Destino: ', d.nombre,
+                   ', Fecha: ', TO_CHAR(tr.fecha_inicio, 'DD/MM/YYYY'), ' <-> ', TO_CHAR(tr.fecha_fin, 'DD/MM/YYYY'))
+        WHEN s.id_excursion IS NOT NULL THEN 
+            CONCAT('Destino: ', d.nombre,
+                   ', Tipo: ', e.tipo_actividad,
+                   ', Idioma: ', e.idioma,
+                   ', Rec. edad: ', e.rest_edad,
+                   ', Rest. salud:', e.rest_salud,
+                   ', Fecha: ', TO_CHAR(e.fecha_inicio, 'DD/MM/YYYY'), ' <-> ', TO_CHAR(e.fecha_fin, 'DD/MM/YYYY'))
+        ELSE NULL
+    END AS detalles,
+    s.precio AS precio_del_servicio,
+    s.status AS Estado_del_servicio,
+    s.dni_personal AS personal_del_servicio
+FROM 
+    servicios s
+    LEFT JOIN alojamientos a ON a.id_alojamiento = s.id_alojamiento
+    LEFT JOIN vehiculos_de_alquiler v ON s.id_vehiculo_alquiler = v.id_vehiculo
+    LEFT JOIN excursiones e ON s.id_excursion = e.id
+    LEFT JOIN transporte tr ON s.id_transporte = tr.id_transporte
+    LEFT JOIN tipo_vehiculo tv ON (tv.id_tipo = v.tipo OR tv.id_tipo = tr.tipo)
+	    LEFT JOIN destinos d ON 
+        (d.id_destino = a.ubicacion OR 
+         d.id_destino = v.ubicacion OR 
+         d.id_destino = tr.origen OR
+         d.id_destino = tr.destino OR 
+         d.id_destino = e.destino)
+ORDER BY 
+    s.id_servicio, s.nombre, id_tipo_servicio;
 
 /*
 Vista: vw_servicios_activos
