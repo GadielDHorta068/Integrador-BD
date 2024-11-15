@@ -11,14 +11,19 @@ tiposervicio: Tipo de servicio.
 
 Orden: Descendente por puntaje_promedio.
 */
- CREATE OR REPLACE VIEW vw_top10_servicios AS
-  SELECT  c.id_servicio as servicio,TRUNC(avg(c.puntaje),1) as puntaje_promedio,tiposervicio
-FROM Calificaciones c
-GROUP BY
-   c.id_servicio,c.tiposervicio
-ORDER BY
+CREATE OR REPLACE VIEW vw_top10_servicios AS
+  SELECT  
+    TRUNC(AVG(c.puntaje), 1) AS puntaje_promedio,
+    vs.tipo_de_servicio AS servicio,
+    vs.detalles AS detalle
+  FROM Calificaciones c
+  JOIN vw_servicios vs ON c.id_servicio = vs.id_del_servicio
+  GROUP BY
+    c.id_servicio, vs.tipo_de_servicio, vs.detalles
+  ORDER BY
     puntaje_promedio DESC
-LIMIT 10;
+  LIMIT 10;
+  select * from vw_top10_servicios
 
 /*
 Vista: vw_top10_peores_servicios
@@ -32,18 +37,18 @@ tiposervicio: Tipo de servicio.
 
 Orden: Ascendente por puntaje_promedio.
 */
-SELECT * FROM vw_top10_servicios;
-    CREATE OR REPLACE VIEW vw_top10_peores_servicios AS
-    SELECT  c.id_servicio as servicio,TRUNC(avg(c.puntaje),1) as puntaje_promedio,tiposervicio
-
-    FROM Calificaciones c
-
-    GROUP BY    c.id_servicio,c.tiposervicio
-ORDER BY
+ CREATE OR REPLACE VIEW vw_top10_peores_servicios AS
+     SELECT  
+    TRUNC(AVG(c.puntaje), 1) AS puntaje_promedio,
+    vs.tipo_de_servicio AS servicio,
+    vs.detalles AS detalle
+  FROM Calificaciones c
+  JOIN vw_servicios vs ON c.id_servicio = vs.id_del_servicio
+  GROUP BY
+    c.id_servicio, vs.tipo_de_servicio, vs.detalles
+  ORDER BY
     puntaje_promedio ASC
-LIMIT 10;
-
-
+  LIMIT 10;
 /*
 Vista: promedio_servicios
 
@@ -57,11 +62,15 @@ tiposervicio: Tipo de servicio.
 Orden: Ascendente por puntaje_promedio.
 */
  CREATE OR REPLACE VIEW promedio_servicios AS
-  SELECT  c.id_servicio as servicio,TRUNC(avg(c.puntaje),1) as puntaje_promedio,c.tiposervicio
-FROM Calificaciones c
-GROUP BY
-    c.id_servicio,c.tiposervicio
-ORDER BY
+  SELECT  
+    TRUNC(AVG(c.puntaje), 1) AS puntaje_promedio,
+    vs.tipo_de_servicio AS servicio,
+    vs.detalles AS detalle
+  FROM Calificaciones c
+  JOIN vw_servicios vs ON c.id_servicio = vs.id_del_servicio
+  GROUP BY
+    c.id_servicio, vs.tipo_de_servicio, vs.detalles
+  ORDER BY
     puntaje_promedio ASC;
 SELECT * FROM promedio_servicios;
 
