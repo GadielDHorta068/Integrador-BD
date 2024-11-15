@@ -224,20 +224,14 @@ personal_del_servicio: Personal asignado al servicio.
 Condición: status es verdadero.
 */
 CREATE VIEW vw_servicios_activos AS
-SELECT s.id_servicio AS Id_del_servicio,
-		s.nombre AS tipo_de_servicio,
-		CASE
-			WHEN s.id_alojamiento IS NOT NULL THEN s.id_alojamiento::VARCHAR
-           	WHEN s.id_vehiculo_alquiler IS NOT NULL THEN s.id_vehiculo_alquiler::VARCHAR
-           	WHEN s.id_transporte IS NOT NULL THEN s.id_transporte::VARCHAR
-           	WHEN s.id_excursion IS NOT NULL THEN s.id_excursion::VARCHAR
-			ELSE NULL
-		END AS id_del_tipo_de_servicio,
-		s.precio AS precio_del_servicio,
-		s.dni_personal AS personal_del_servicio
-FROM servicios s
-WHERE s.status = true
-ORDER BY s.id_servicio, s.nombre, id_del_tipo_de_servicio
+SELECT Id_del_servicio,
+	tipo_de_servicio,
+	id_tipo_servicio,
+	detalles,
+	precio_del_servicio,
+	personal_del_servicio
+FROM vw_servicios s
+WHERE s.Estado_del_servicio = true;
 
 /*
 Vista: vw_servicios_inactivos
@@ -254,20 +248,14 @@ personal_del_servicio: Personal asignado al servicio.
 Condición: status es falso.
 */
 CREATE VIEW vw_servicios_inactivos AS
-SELECT s.id_servicio AS Id_del_servicio,
-		s.nombre AS tipo_de_servicio,
-		CASE
-			WHEN s.id_alojamiento IS NOT NULL THEN s.id_alojamiento::VARCHAR
-           	WHEN s.id_vehiculo_alquiler IS NOT NULL THEN s.id_vehiculo_alquiler::VARCHAR
-           	WHEN s.id_transporte IS NOT NULL THEN s.id_transporte::VARCHAR
-           	WHEN s.id_excursion IS NOT NULL THEN s.id_excursion::VARCHAR
-			ELSE NULL
-		END AS id_del_tipo_de_servicio,
-		s.precio AS precio_del_servicio,
-		s.dni_personal AS personal_del_servicio
-FROM servicios s
-WHERE s.status = false
-ORDER BY s.id_servicio, s.nombre, id_del_tipo_de_servicio
+SELECT Id_del_servicio,
+	tipo_de_servicio,
+	id_tipo_servicio,
+	detalles,
+	precio_del_servicio,
+	personal_del_servicio
+FROM vw_servicios s
+WHERE s.Estado_del_servicio = false;
 
 /*
 Vista: vw_cant_servicios_empleados
@@ -332,8 +320,8 @@ Vista: vw_servicios_alojamientos
 Propósito: Muestra la relación entre servicios y alojamientos.
 
 Columnas:
-nombre: Nombre del alojamiento.
-id_alojamiento: ID del alojamiento.
+	nombre: Nombre del alojamiento.
+	id_alojamiento: ID del alojamiento.
 */
 
 CREATE OR REPLACE VIEW "ISFPP2024".vw_servicios_alojamientos
@@ -347,3 +335,60 @@ CREATE OR REPLACE VIEW "ISFPP2024".vw_servicios_alojamientos
 
 ALTER TABLE "ISFPP2024".vw_servicios_alojamientos
     OWNER TO estudiante;
+
+/*
+Vista: vw_adicionales_de_reservas
+
+proposito: Muestra los adicionales que tienen las reservas (Seguro de viajes)
+
+Columnas:
+	id_reserva: id de de x reserva
+	estado: estado en el que se encuentra la reserva, si esta activa o inactiva
+	inicio_reserva: fecha en la que inicia la reserva
+	fin_reserva: fecha en la que termina la reserva
+	tipo_seguro: tipo de seguro que esta asociado a la reserva
+	descripcion_del_seguro: descripcion del seguro
+	responsabilidad_legal: responsabilidad legal sobre el seguro
+	costo_seguro: el precio que tiene el seguro de la reserva
+*/
+CREATE OR REPLACE VIEW vw_adicionales_de_reservas AS
+SELECT r.id_reserva,
+	r.estado,
+	r.inicio_viaje AS inicio_reserva,
+	r.fin_viaje AS fin_reserva,
+	s.tipo_seguro,
+	s.descripcion AS descripcion_del_seguro,
+	s.responsabilidad_legal,
+	s.costo AS costo_seguro
+FROM seguroviaje s JOIN adicionales_reserva i ON s.id_seguro = i.id_seguro
+JOIN reservas r ON i.id_reserva = r.id_reserva;
+
+/*
+Vista: vw_adicionales_de_paquete
+
+proposito: Muestra los adicionales que tienen los paquetes (Seguro de viajes)
+
+Columnas:
+	id_paquete: id de de x paquete
+	estado: estado en el que se encuentra el paquete, si esta activa o inactiva
+	inicio_reserva: fecha prevista en la que inicia el paquete
+	fin_reserva: fecha prevista en la que termina el paquete
+	tipo_seguro: tipo de seguro que esta asociado a el paquete
+	descripcion_del_seguro: descripcion del seguro
+	responsabilidad_legal: responsabilidad legal sobre el seguro
+	costo_seguro: el precio que tiene el seguro del paquete
+*/
+
+CREATE OR REPLACE VIEW adicionales_de_paquetes AS
+SELECT pq.id_paquete,
+pq.estado,
+pq.fecha_inicio AS inicio_paquete,
+pq.fecha_fin AS fin_paquete,
+s.tipo_seguro,
+s.descripcion AS descripcion_del_seguro,
+s.responsabilidad_legal,
+pq.precio AS precio_paquete,
+s.costo AS precio_seguro
+FROM seguroviaje s JOIN adicionales_paquete i ON s.id_seguro = i.id_seguro
+JOIN paquetes pq ON i.id_paquete = pq.id_paquete;
+
