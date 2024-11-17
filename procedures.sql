@@ -42,25 +42,61 @@ Verifica si ambos id_seguro_old y id_seguro_new existen en la tabla seguroViaje.
 
 Inserta un nuevo registro en la tabla adicionales_paquete con el id_paquete, id_reserva, y precio proporcionados.
 */
-CREATE or replace PROCEDURE sp_modificar_adicionales_seguro( id_paquete INTEGER,id_seguro_old INTEGER,id_seguro_new INTEGER)
+CREATE OR REPLACE PROCEDURE sp_modificar_adicionales_seguro(id_paquete INTEGER, id_seguro_old INTEGER, id_seguro_new INTEGER)
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM paquetes WHERE id_paquetes = id_paquete) THEN
-        RAISE EXCEPTION 'El servicio con ID % no está activo o no existe ', id_paquete;
-    END IF;
-	IF NOT EXISTS (SELECT 2 FROM seguroViaje WHERE id_seguro = id_seguro_old or id_seguro_new) THEN
-        RAISE EXCEPTION 'Error alguna id de seguro invalida % % ', id_seguro_old,id_seguro_new;
+    -- Validar que el paquete existe
+    IF NOT EXISTS (SELECT 1 FROM adicionales_paquete WHERE id_paquete = $1) THEN
+        RAISE EXCEPTION 'El paquete con ID % no está activo o no existe', id_paquete;
     END IF;
 
-    INSERT INTO adicionales_paquete( id_seguro,id_reserva,  precio)
-    VALUES (id_paquete, id_reserva, precio);
+    -- Validar que los seguros existen
+    IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguro_old) THEN
+        RAISE EXCEPTION 'El seguro antiguo con ID % no existe', id_seguro_old;
+    END IF;
 
-	UPDATE adicionales_paquete
-	SET id_seguro = id_seguro_new
-	WHERE id_seguro=id_seguro_old and id_paquetes=id_paquete;
+    IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguro_new) THEN
+        RAISE EXCEPTION 'El seguro nuevo con ID % no existe', id_seguro_new;
+    END IF;
 
-END;$$;
+    -- Bloquear la fila del paquete
+    PERFORM 1
+    FROM adicionales_paquete
+    WHERE id_paquete = $1
+    FOR UPDATE;
+
+    -- Bloquear las filas de los seguros implicados
+    PERFORM 1
+    FROM seguroViaje
+    WHERE id_seguro = id_seguro_old
+    FOR UPDATE;
+
+    PERFORM 1
+    FROM seguroViaje
+    WHERE id_seguro = id_seguro_new
+    FOR UPDATE;
+
+    -- Actualizar el seguro en la tabla de adicionales
+    UPDATE adicionales_paquete
+    SET id_seguro = id_seguro_new
+    WHERE id_seguro = id_seguro_old AND id_paquete = $1;
+
+    -- Confirmar la transacción
+    COMMIT;
+
+    -- Mensaje de confirmación
+    RAISE NOTICE 'El seguro % fue reemplazado por el seguro % en el paquete %', id_seguro_old, id_seguro_new, id_paquete;
+
+EXCEPTION
+    WHEN foreign_key_violation THEN
+        ROLLBACK;
+        RAISE EXCEPTION 'Error: Se produjo una violación de clave foránea.';
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+END;
+$$;
 
 /*
 Procedimiento: sp_modificar_adicionales_precio
@@ -74,22 +110,52 @@ precio: Nuevo precio del adicional.
 
 Lógica: Verifica la existencia del paquete y seguro antes de actualizar el precio.
 */
-CREATE or replace PROCEDURE sp_modificar_adicionales_precio( id_paquete INTEGER,id_seguro INTEGER,precio numeric(40,2))
+CREATE OR REPLACE PROCEDURE sp_modificar_adicionales_precio(id_paquete INTEGER, id_seguro INTEGER, precio NUMERIC(40, 2))
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM paquetes WHERE id_paquetes = id_paquete) THEN
-        RAISE EXCEPTION 'El servicio con ID % no está activo o no existe ', id_paquete;
+    -- Validar existencia del paquete
+    IF NOT EXISTS (SELECT 1 FROM paquetes p WHERE p.id_paquete = id_paquete) THEN
+        RAISE EXCEPTION 'El paquete con ID % no existe', id_paquete;
     END IF;
-	IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguro) THEN
-        RAISE EXCEPTION 'El paquete con la ID % no existe', id_seguro;
+
+    -- Validar existencia del seguro
+    IF NOT EXISTS (SELECT 1 FROM seguroViaje v WHERE v.id_seguro = id_seguro) THEN
+        RAISE EXCEPTION 'El seguro con ID % no existe', id_seguro;
     END IF;
-	UPDATE adicionales_paquete
-	SET precio=precio
-	WHERE id_seguro=id_seguro and id_paquetes=id_paquete;
 
-END;$$;
+	-- Bloquear la fila del paquete
+    PERFORM 1
+    FROM adicionales_paquete p
+    WHERE p.id_paquete = id_paquete
+    FOR UPDATE;
 
+    -- Bloquear la filas del seguro
+    PERFORM 1
+    FROM seguroViaje s
+    WHERE s.id_seguro = id_seguro
+    FOR UPDATE;
+
+	-- Actualizar el precio del adicional
+    UPDATE adicionales_paquete
+    SET precio = $3
+    WHERE id_seguro = $2 AND id_paquete = $1;
+
+	 -- Confirmar la transacción
+    COMMIT;
+
+    -- Confirmar éxito de la operación
+    RAISE NOTICE 'El precio del adicional ha sido modificado correctamente para el paquete % y seguro %', id_paquete, id_seguro;
+
+	EXCEPTION
+	WHEN foreign_key_violation THEN
+		ROLLBACK;
+		RAISE EXCEPTION 'Error: Se produjo una violación de clave foránea.';
+	WHEN OTHERS THEN
+		ROLLBACK;
+	RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+END;
+$$;
 
 /*
 Procedimiento: sp_eliminar_adicionales
@@ -236,15 +302,41 @@ nuevo_rol: Nuevo rol del empleado.
 
 Lógica: Actualiza el rol del empleado especificado.
 */
-CREATE or replace PROCEDURE sp_personal_modificar_rol(dni INTEGER,nuevo_rol varchar(10))
+CREATE OR REPLACE PROCEDURE sp_personal_modificar_rol(
+    dni INTEGER,
+    nuevo_rol VARCHAR(10)
+)
 LANGUAGE plpgsql
 AS $$
-declare
 BEGIN
-update  personal e
-SET e.rol =nuevo_rol
-WHERE e.dni_personal = dni;
-end;$$;
+    -- Validar existencia del personal
+    IF NOT EXISTS (SELECT 1 FROM personal WHERE dni_personal = dni) THEN
+        RAISE EXCEPTION 'No existe un personal con el DNI %', dni;
+    END IF;
+
+	-- Bloquear la fila del paquete
+    PERFORM 1
+    FROM personal p
+    WHERE p.dni_personal = dni
+    FOR UPDATE;
+	
+
+    -- Actualizar el rol del personal
+    UPDATE personal
+    SET rol = nuevo_rol
+    WHERE dni_personal = dni;
+
+	COMMIT;
+	
+    -- Mensaje de confirmación
+    RAISE NOTICE 'Rol actualizado correctamente para el personal, de DNI: %', dni;
+
+	EXCEPTION
+	WHEN OTHERS THEN
+		ROLLBACK;
+		RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+END;
+$$;
 
 /*
 Procedimiento: sp_personal_modificar_salario
@@ -262,11 +354,32 @@ LANGUAGE plpgsql
 AS $$
 declare
 BEGIN
-update  personal e
-SET e.salario =nuevo_salario
-WHERE e.dni_personal = dni;
-end;
-$$;
+	 -- Validar existencia del personal
+	IF NOT EXISTS (SELECT 1 FROM personal WHERE dni_personal = dni) THEN
+        	RAISE EXCEPTION 'No existe un personal con el DNI %', dni;
+    	END IF;
+
+	-- Bloquear la fila del paquete
+    	PERFORM 1
+    	FROM personal p
+    	WHERE p.dni_personal = dni
+    	FOR UPDATE;
+
+	UPDATE  personal 
+	SET salario =nuevo_salario
+	WHERE dni_personal = dni;
+
+	COMMIT;
+
+	 -- Mensaje de confirmación
+    	RAISE NOTICE 'salario actualizado correctamente para el personal, de DNI: %', dni;
+
+	EXCEPTION
+	    WHEN OTHERS THEN
+	    	ROLLBACK;
+		RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+END;
+$$; 
 
 /*
 Procedimiento: sp_personal_modificar_nombre
@@ -282,12 +395,32 @@ Lógica: Actualiza el nombre del empleado especificado.
 CREATE or replace PROCEDURE sp_personal_modificar_nombre(dni INTEGER,nuevo_nombre varchar(20))
 LANGUAGE plpgsql
 AS $$
-declare
 BEGIN
-update  personal e
-SET e.nombre =nuevo_nombre
-WHERE e.dni_personal = dni;
-end;
+	-- Validar existencia del personal
+    	IF NOT EXISTS (SELECT 1 FROM personal WHERE dni_personal = dni) THEN
+	        RAISE EXCEPTION 'No existe un personal con el DNI %', dni;
+    	END IF;
+
+	-- Bloquear la fila del paquete
+    	PERFORM 1
+    	FROM personal p
+    	WHERE p.dni_personal = dni
+    	FOR UPDATE;
+	
+	UPDATE  personal
+	SET nombre = nuevo_nombre
+	WHERE dni_personal = dni;
+
+	COMMIT;
+
+	 -- Mensaje de confirmación
+	RAISE NOTICE 'nombre actualizado correctamente para el personal, de DNI: %', dni;
+
+	EXCEPTION
+	    WHEN OTHERS THEN
+	    	ROLLBACK;
+		RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+END;
 $$;
 
 /*
@@ -304,12 +437,32 @@ Lógica: Actualiza el apellido del empleado especificado.
 CREATE or replace PROCEDURE sp_personal_modificar_apellido(dni INTEGER,nuevo_apellido varchar(20))
 LANGUAGE plpgsql
 AS $$
-declare
 BEGIN
-update  personal e
-SET e.apellido =nuevo_apellido
-WHERE e.dni_personal = dni;
-end;
+	-- Validar existencia del personal
+    	IF NOT EXISTS (SELECT 1 FROM personal WHERE dni_personal = dni) THEN
+        	RAISE EXCEPTION 'No existe un personal con el DNI %', dni;
+    	END IF;
+
+	-- Bloquear la fila del paquete
+    	PERFORM 1
+    	FROM personal p
+    	WHERE p.dni_personal = dni
+	FOR UPDATE;
+	
+	UPDATE personal
+	SET apellido = nuevo_apellido
+	WHERE dni_personal = dni;
+
+	COMMIT;
+
+	-- Mensaje de confirmación
+ 	RAISE NOTICE 'nombre actualizado correctamente para el personal, de DNI: %', dni;
+
+	EXCEPTION
+	    WHEN OTHERS THEN
+	    	ROLLBACK;
+		RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+END;
 $$;
 
 /*
@@ -390,21 +543,43 @@ nuevo_precio: Nuevo precio del adicional (opcional).
 
 Lógica: Verifica la existencia del seguro y reserva antes de actualizar el adicional.
 */
-CREATE OR REPLACE PROCEDURE sp_actualizar_adicional(id_seguro INTEGER, id_reserva INTEGER, nuevo_precio numeric)
+CREATE OR REPLACE PROCEDURE sp_actualizar_adicional(id_seguro INTEGER, id_reserva INTEGER, nuevo_precio NUMERIC)
+LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM "ISFPP2024".seguroviaje WHERE id_seguro = id_seguro) THEN
+    -- Validar que el seguro existe
+    IF NOT EXISTS (SELECT 1 FROM seguroviaje s WHERE s.id_seguro = id_seguro) THEN
         RAISE EXCEPTION 'El seguro con ID % no está activo o no existe', id_seguro;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM "ISFPP2024".reservas WHERE id_reserva = id_reserva) THEN
+
+    -- Validar que la reserva existe
+    IF NOT EXISTS (SELECT 1 FROM reservas r WHERE r.id_reserva = id_reserva) THEN
         RAISE EXCEPTION 'La reserva con la ID % no existe', id_reserva;
     END IF;
 
-    UPDATE "ISFPP2024".adicionales_seguro
-    SET precio = nuevo_precio
-    WHERE id_seguro = id_seguro AND id_reserva = id_reserva;
+    -- Bloquear la fila en la tabla adicionales_seguro
+    PERFORM 1
+    FROM adicionales_seguro a
+    WHERE a.id_seguro = $1 AND a.id_reserva = $2
+    FOR UPDATE;
+
+    -- Actualizar el precio del adicional
+    UPDATE adicionales_seguro
+    SET precio = $3 -- Usando alias $3 para nuevo_precio
+    WHERE id_seguro = $1 AND id_reserva = $2;
+
+    COMMIT;
+
+    -- Mensaje de confirmación
+    RAISE NOTICE 'Precio actualizado correctamente para el adicional con ID Seguro % y Reserva %', id_seguro, id_reserva;
+
+	EXCEPTION
+	    WHEN OTHERS THEN
+	        -- Revertir los cambios en caso de error
+	        ROLLBACK;
+	        RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 /*
 Sobrecarga del método para actualizar id_reserva, precio o ambos */
@@ -570,14 +745,31 @@ CREATE OR REPLACE PROCEDURE sp_Desabilitar_Servicio(id_servicio INTEGER)
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF id_servicio IS NULL THEN
-        RAISE EXCEPTION 'La id de servicio dada es nula';
-    ELSE
-        -- Cambia el estado del servicio a falso
-        UPDATE servicio
-        SET status = FALSE
-        WHERE id_servicio = id_servicio;
-    END IF;
+	IF NOT EXISTS (SELECT 1 FROM servicios WHERE id_servicio = $1) THEN
+    		RAISE EXCEPTION 'No se encontró el servicio con la id: %', $1;
+	END IF;
+    	IF id_servicio IS NULL THEN
+        	RAISE EXCEPTION 'La id de servicio dada es nula';
+    	END IF;
+
+	-- Bloquear la fila en la tabla adicionales_seguro
+    	PERFORM 1
+    	FROM servicios s
+    	WHERE s.id_servicio = $1
+    	FOR UPDATE;
+	
+	-- Cambia el estado del servicio a falso
+	UPDATE servicio
+	SET status = FALSE
+	WHERE id_servicio = $1;
+	
+	COMMIT;
+
+	EXCEPTION
+		WHEN OTHERS THEN
+        	-- Revertir los cambios en caso de error
+        	ROLLBACK;
+        	RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;	
 END;
 $$;
 
@@ -600,20 +792,32 @@ CREATE OR REPLACE PROCEDURE sp_Modificar_Servicio_precio(id_servicio INTEGER, pr
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    -- Verificar si el id_servicio es nulo
-    IF id_servicio IS NULL THEN
-        RAISE EXCEPTION 'El id del servicio no puede ser nulo';
-    END IF;
+	IF NOT EXISTS (SELECT 1 FROM servicios WHERE id_servicio = $1) THEN
+    		RAISE EXCEPTION 'No se encontró el servicio con la id: %', $1;
+	END IF;
+    	-- Verificar si el id_servicio es nulo
+    	IF id_servicio IS NULL THEN
+        	RAISE EXCEPTION 'El id del servicio no puede ser nulo';
+    	END IF;
 
-    -- Intentar actualizar el precio del servicio
-    UPDATE Servicios
-    SET precio = precio
-    WHERE id_servicio = id_servicio;
+	-- Bloquear la fila en la tabla adicionales_seguro
+    	PERFORM 1
+    	FROM servicios s
+    	WHERE s.id_servicio = $1
+    	FOR UPDATE;
 
-    -- Comprobar si el servicio fue encontrado y actualizado
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'El servicio con id % no existe', id_servicio;
-    END IF;
+    	-- Intentar actualizar el precio del servicio
+    	UPDATE Servicios
+    	SET precio = precio
+    	WHERE id_servicio = $1;
+
+    	COMMIT;
+
+	EXCEPTION
+		WHEN OTHERS THEN
+        	-- Revertir los cambios en caso de error
+        	ROLLBACK;
+        	RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;	
 END;
 $$;
 
