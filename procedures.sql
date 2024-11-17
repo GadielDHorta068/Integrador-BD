@@ -177,13 +177,19 @@ id_cliente: ID del cliente.
 
 Lógica: Elimina la calificación correspondiente al cliente y servicio especificados.
 */
-
-CREATE or replace PROCEDURE sp_eliminar_calificacion(id_s INTEGER,id_cliente INTEGER)
+CREATE OR REPLACE PROCEDURE sp_eliminar_calificacion(id_s INTEGER, id_cliente INTEGER)
 LANGUAGE plpgsql
 AS $$
-declare
 BEGIN
-   delete from Calificaciones c where c.id_servicio=id_s and c.id_cliente=id_cliente;
+    DELETE FROM Calificaciones c
+    WHERE c.id_servicio = id_s AND c.id_cliente = id_cliente;
+
+    RAISE NOTICE 'Calificación eliminada correctamente.';
+EXCEPTION
+    WHEN foreign_key_violation THEN
+        RAISE WARNING 'No se puede eliminar la calificación debido a una restricción de clave foránea.';
+    WHEN OTHERS THEN
+        RAISE WARNING 'Ocurrió un error inesperado: %', SQLERRM;
 END;
 $$;
 
@@ -344,19 +350,31 @@ id_reserva: ID de la reserva.
 Lógica: Verifica la existencia del seguro y reserva antes de eliminar el adicional.
 */
 CREATE OR REPLACE PROCEDURE sp_borrar_adicional(id_seguro INTEGER, id_reserva INTEGER)
+LANGUAGE plpgsql
 AS $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM "ISFPP2024".seguroviaje WHERE id_seguro = id_seguro) THEN
         RAISE EXCEPTION 'El seguro con ID % no está activo o no existe', id_seguro;
     END IF;
+
     IF NOT EXISTS (SELECT 1 FROM "ISFPP2024".reservas WHERE id_reserva = id_reserva) THEN
         RAISE EXCEPTION 'La reserva con la ID % no existe', id_reserva;
     END IF;
 
-    DELETE FROM "ISFPP2024".adicionales_seguro
-    WHERE id_seguro = id_seguro AND id_reserva = id_reserva;
+    BEGIN
+        DELETE FROM "ISFPP2024".adicionales_seguro
+        WHERE id_seguro = id_seguro AND id_reserva = id_reserva;
+
+        RAISE NOTICE 'El adicional con ID seguro % e ID reserva % fue eliminado correctamente.', id_seguro, id_reserva;
+    EXCEPTION
+        WHEN foreign_key_violation THEN
+            RAISE WARNING 'No se puede eliminar el adicional con ID seguro % e ID reserva % debido a restricciones de clave foránea.', id_seguro, id_reserva;
+        WHEN OTHERS THEN
+            RAISE WARNING 'Ocurrió un error inesperado: %', SQLERRM;
+    END;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
 
 
 /*
@@ -518,13 +536,23 @@ CREATE OR REPLACE PROCEDURE sp_Eliminar_Servicio(id_servicio INTEGER)
 LANGUAGE plpgsql
 AS $$
 BEGIN
-	IF (id_servicio IS NULL) THEN
-		RAISE EXCEPTION 'La id de servicio dada es nula';
-	ELSE
-		DELETE FROM servicio e WHERE e.id_servicio = id_servicio;
-	END IF;
+    IF id_servicio IS NULL THEN
+        RAISE EXCEPTION 'La id de servicio dada es nula';
+    ELSE
+        BEGIN
+            DELETE FROM servicio e WHERE e.id_servicio = id_servicio;
+
+            RAISE NOTICE 'El servicio con id % fue eliminado correctamente.', id_servicio;
+        EXCEPTION
+            WHEN foreign_key_violation THEN
+                RAISE WARNING 'No se puede eliminar el servicio con id % debido a restricciones de clave foránea.', id_servicio;
+            WHEN OTHERS THEN
+                RAISE WARNING 'Ocurrió un error inesperado: %', SQLERRM;
+        END;
+    END IF;
 END;
 $$;
+
 
 /*
 Procedimiento: sp_Desabilitar_Servicio

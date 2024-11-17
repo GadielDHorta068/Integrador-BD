@@ -14,7 +14,6 @@ def csv_to_markdown(csv_file, markdown_file):
         for row in rows[1:]:
             mdfile.write('| ' + ' | '.join(row) + ' |\n')
 
-# Leer argumentos de la terminal
 if len(sys.argv) != 3:
     print("Uso: python3 csv_to_markdown.py <archivo_csv> <archivo_md>")
     sys.exit(1)
