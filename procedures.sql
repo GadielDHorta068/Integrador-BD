@@ -134,25 +134,37 @@ CREATE OR REPLACE PROCEDURE sp_insertar_calificacion(
     id_cliente INTEGER,
     id_servicios INTEGER,
     detalle varchar(50),
-    puntaje INTEGER,
-    tipo char(1)
+    puntaje INTEGER
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    -- Verificar si el servicio está activo
-    IF NOT EXISTS (SELECT 1 FROM Servicios WHERE id_servicio = id_servicios AND status = FALSE) THEN
-        RAISE EXCEPTION 'El servicio con ID % no está activo o no existe.', id_servicio;
+   begin
+   IF NOT EXISTS (
+        SELECT 1
+        FROM Servicios 
+        WHERE id_servicio = id_servicios 
+          AND status = FALSE
+        FOR UPDATE NOWAIT  -- Bloquea la fila para evitar modificaciones concurrentes
+    ) THEN
+        RAISE EXCEPTION 'El servicio con ID % no está activo o no existe.', id_servicios;
     END IF;
 
     -- Insertar en la tabla Calificaciones
-    INSERT INTO Calificaciones (ID_cliente, ID_servicio, detalle, puntaje, TipoServicio)
-    VALUES (id_cliente, id_servicios, detalle, puntaje, UPPER(tipo));
+    INSERT INTO Calificaciones (ID_cliente, ID_servicio, detalle, puntaje)
+    VALUES (id_cliente, id_servicios, detalle, puntaje);
+	commit;
+	EXCEPTION
+		   WHEN foreign_key_violation THEN
+            RAISE EXCEPTION 'Ese cliente no existe';
+
+        WHEN others THEN
+            -- Si ocurre un error, revertir la transacción
+            RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+    END;
 END;
 $$;
-SELECT proname, proargtypes FROM pg_proc WHERE proname = 'sp_insertar_calificacion';
 
-CALL  sp_insertar_calificacion(12345678, 3, 'Deficiente', 2, 'E');
 
 /*
 Procedimiento: sp_eliminar_calificacion
@@ -194,51 +206,17 @@ LANGUAGE plpgsql
 AS $$
 declare
 begin
-INSERT INTO Calificaciones (dni_personal,rol,salario,nombre,apellido)
+    BEGIN
+    INSERT INTO personal (dni_personal,rol,salario,nombre,apellido)
     VALUES (dni , INITCAP(rol) ,salario, INITCAP(nombre), INITCAP(apellido));
-
+EXCEPTION
+    WHEN others THEN
+        -- Maneja cualquier error durante la operación
+        RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+END;
 end;
 $$;
 
-
-/*
-Procedimiento: sp_eliminar_empleado
-
-Propósito: Elimina un empleado y reasigna sus tareas a otro empleado.
-
-Parámetros:
-dni: DNI del empleado a eliminar.
-nuevoEmpleado: DNI del empleado que asumirá las tareas.
-
-Lógica: Actualiza las referencias al empleado en otras tablas y elimina el registro del empleado.
-*/
-CREATE or replace PROCEDURE sp_eliminar_empleado(dni INTEGER,nuevoEmpleado INTEGER)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM Servicios WHERE dni_personal =dni or dni_personal=nuevoEmpleado) THEN
-        RAISE EXCEPTION 'Alguno de los dni no existe %,%',dni,nuevoEmpleado;
-    END IF;
-
-UPDATE servicios
-SET dni_personal = nuevoEmpleado
-WHERE dni_personal = dni;
-
-UPDATE reservas
-SET dni_personal = nuevoEmpleado
-WHERE dni_personal = dni;
-
-UPDATE excursiones
-SET guia = nuevoEmpleado
-WHERE guia = dni;
-delete from personal where dni_personal=dni;
-commit;
-EXCEPTION
-    WHEN foreign_key_violation THEN
-        RAISE NOTICE 'Violación de clave foránea. No se puede actualizar el dni_personal a %', nuevoEmpleado;
-    WHEN others THEN
-        RAISE NOTICE 'Ocurrió un error inesperado: %', SQLERRM;
-end;$$;
 
 
 /*
@@ -350,8 +328,8 @@ BEGIN
         RAISE EXCEPTION 'La reserva con la ID % no existe', id_reserva;
     END IF;
 
-    INSERT INTO "ISFPP2024".adicionales_seguro (id_seguro, id_reserva, precio)
-    VALUES (id_seguro, id_reserva, precio);
+    INSERT INTO "ISFPP2024".adicionales_seguro (id_seguro, id_reserva)
+    VALUES (id_seguro, id_reserva);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -490,6 +468,10 @@ declare
 	check_solo INTEGER;
 
 BEGIN
+	-- Iniciar una transacción explícita
+    BEGIN
+        -- Bloqueo de las tablas relevantes
+        LOCK TABLE Servicios IN EXCLUSIVE MODE;  -- Bloquea la tabla Servicios
 	check_solo := (id_VA IS NOT NULL)::int +
         		(id_Transporte IS NOT NULL)::int +
         		(id_Excurcion IS NOT NULL)::int +
@@ -510,6 +492,13 @@ BEGIN
 	ELSIF (id_excurcion IS NOT NULL) THEN
 		CALL Agregar_servicio_tipo_Excurcion(id_Excurcion, precio);
 	END IF;
+	commit;
+EXCEPTION
+        WHEN others THEN
+            -- Si ocurre un error, revertir la transacción
+            ROLLBACK;
+            RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+    END;
 END;
 $$;
 
@@ -615,29 +604,39 @@ Verifica la existencia del id_alojamiento en la tabla alojamientos.
 
 Inserta el servicio si el ID es válido
 */
-CREATE OR REPLACE PROCEDURE sp_Agregar_servicio_tipo_alojamiento(id_alojamiento INTEGER, precio double precision)
-LANGUAGE plpgsql
-AS $$
+CREATE OR REPLACE PROCEDURE "ISFPP2024".sp_agregar_servicio_tipo_alojamiento(
+	new_id_alojamiento integer,
+	precio double precision)
+LANGUAGE 'plpgsql'
+AS $BODY$
 DECLARE
-    chk_id INTEGER;
+    chk_id integer;
 BEGIN
-    -- Validación del ID de alojamiento
-    IF id_alojamiento IS NULL THEN
-        RAISE EXCEPTION 'Error: la id de alojamiento es nula';
-    END IF;
-
-    -- Verificación de existencia del ID en la tabla alojamientos
-    SELECT id INTO chk_id FROM alojamientos WHERE id = id_alojamiento;
-
-    -- Inserción si el ID es válido
-    IF chk_id IS NOT NULL THEN
-        INSERT INTO Servicios (id_alojamiento, id_VA, id_Transporte, id_Excurcion, precio)
-        VALUES (id_alojamiento, NULL, NULL, NULL, precio);
-    ELSE
-        RAISE EXCEPTION 'El id de alojamiento no existe';
-    END IF;
+   BEGIN
+        -- Validación del ID de alojamiento
+        IF new_id_alojamiento IS NULL THEN
+            RAISE EXCEPTION 'Error: la id de alojamiento es nula';
+        END IF;
+        -- Verificación de existencia del ID en la tabla alojamientos
+        SELECT id_alojamiento INTO chk_id
+        FROM alojamientos
+        WHERE id_alojamiento = new_id_alojamiento
+	FOR UPDATE NOWAIT;  
+	    -- Inserción si el ID es válido
+            INSERT INTO servicios (id_alojamiento, precio)
+            VALUES (new_id_alojamiento, precio);
+        COMMIT;
+    EXCEPTION
+		WHEN foreign_key_violation THEN
+            ROLLBACK;
+            RAISE EXCEPTION 'Error: El id de alojamiento no existe';
+        -- Reversión en caso de error
+        WHEN others THEN
+            ROLLBACK;
+            RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+    END;
 END;
-$$;
+$BODY$;
 
 /*
 Procedimiento: sp_Agregar_servicio_tipo_Vehiculo_alquiler
@@ -653,30 +652,48 @@ Verifica si el id_VA es nulo y lanza una excepción si lo es.
 Verifica la existencia del id_VA en la tabla Vehiculo_de_alquiler.
 Inserta el servicio si el ID es válido.
 */
-CREATE OR REPLACE PROCEDURE sp_Agregar_servicio_tipo_Vehiculo_alquiler(id_VA TEXT, precio double precision)
+CREATE OR REPLACE PROCEDURE sp_Agregar_servicio_tipo_Vehiculo_alquiler(
+    id_VA TEXT, 
+    precio double precision
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
     chk_id text;
 BEGIN
-    -- Validación del ID de vehículo
-    IF id_VA IS NULL THEN
-        RAISE EXCEPTION 'Error: la id de vehículo es nula';
-    END IF;
+    -- Inicio de la transacción dentro del procedimiento
+    BEGIN
+        -- Validación del ID de vehículo
+        IF id_VA IS NULL THEN
+            RAISE EXCEPTION 'Error: la id de vehículo es nula';
+        END IF;
 
-    -- Verificación de existencia del ID en la tabla Vehiculo_de_alquiler
-    SELECT id_Vehiculo INTO chk_id FROM Vehiculo_de_alquiler WHERE id_Vehiculo = id_VA;
+        -- Verificación de existencia del ID en la tabla Vehiculo_de_alquiler
+        SELECT id_Vehiculo INTO chk_id 
+        FROM Vehiculo_de_alquiler 
+        WHERE id_Vehiculo = id_VA
+        FOR UPDATE NOWAIT;  -- Bloqueamos la fila para evitar que otros usuarios modifiquen el mismo vehículo
 
-    -- Inserción si el ID es válido
-    IF chk_id IS NOT NULL THEN
+        -- Si el ID existe, realizamos la inserción en la tabla Servicios
         INSERT INTO Servicios (id_alojamiento, id_VA, id_Transporte, id_Excurcion, precio, status)
         VALUES (NULL, id_VA, NULL, NULL, precio, true);
-    ELSE
-        RAISE EXCEPTION 'El id de vehículo no existe';
-    END IF;
+
+        -- Confirmamos la transacción si todo ha ido bien
+        COMMIT;
+
+    EXCEPTION
+        WHEN foreign_key_violation THEN
+            ROLLBACK;
+            RAISE EXCEPTION 'Error: El id de vehículo de alquiler no existe';
+
+        WHEN others THEN
+            ROLLBACK;
+            RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+
+    END;
+
 END;
 $$;
-
 /*
 Procedimiento: sp_Agregar_servicio_tipo_Excurcion
 
@@ -697,21 +714,28 @@ AS $$
 DECLARE
     chk_id INTEGER;
 BEGIN
+	begin
     -- Validación del ID de excurción
     IF id_Excurcion IS NULL THEN
         RAISE EXCEPTION 'Error: la id de excurcion es nula';
     END IF;
 
     -- Verificación de existencia del ID en la tabla Excurcion
-    SELECT id INTO chk_id FROM Excurcion WHERE id = id_Excurcion;
-
-    -- Inserción si el ID es válido
-    IF chk_id IS NOT NULL THEN
-        INSERT INTO Servicios (id_alojamiento, id_VA, id_Transporte, id_Excurcion, precio)
+    SELECT id INTO chk_id FROM Excurcion WHERE id = id_Excurcion
+	    for update nowait;
+ INSERT INTO Servicios (id_alojamiento, id_VA, id_Transporte, id_Excurcion, precio)
         VALUES (NULL, NULL, NULL, id_Excurcion, precio);
-    ELSE
-        RAISE EXCEPTION 'El id de excurcion no existe';
-    END IF;
+	commit;
+
+    EXCEPTION
+        WHEN foreign_key_violation THEN
+            ROLLBACK;
+          	RAISE EXCEPTION 'El id de excurcion no existe';
+
+        WHEN others THEN
+            ROLLBACK;
+            RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+    END;
 END;
 $$;
 
@@ -729,26 +753,38 @@ Verifica si el id_Transporte es nulo y lanza una excepción si lo es.
 Verifica la existencia del id_Transporte en la tabla Transporte.
 Inserta el servicio si el ID es válido.
 */
-CREATE OR REPLACE PROCEDURE sp_Agregar_servicio_tipo_Transporte(id_Transporte INTEGER, precio double precision)
+CREATE OR REPLACE PROCEDURE sp_Agregar_servicio_tipo_Transporte(
+    id_Transporte INTEGER, 
+    precio double precision
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
     chk_id INTEGER;
 BEGIN
-    -- Validación del ID de transporte
-    IF id_Transporte IS NULL THEN
-        RAISE EXCEPTION 'Error: la id de transporte es nula';
-    END IF;
+    BEGIN
+        -- Validación del ID de transporte
+        IF id_Transporte IS NULL THEN
+            RAISE EXCEPTION 'Error: la id de transporte es nula';
+        END IF;
 
-    -- Verificación de existencia del ID en la tabla Transporte
-    SELECT id INTO chk_id FROM Transporte WHERE id = id_Transporte;
+        -- Verificación de existencia del ID en la tabla Transporte
+        SELECT id INTO chk_id 
+        FROM Transporte 
+        WHERE id = id_Transporte 
+        FOR UPDATE NOWAIT;
 
-    -- Inserción si el ID es válido
-    IF chk_id IS NOT NULL THEN
+        -- Inserción en la tabla Servicios si el ID es válido
         INSERT INTO Servicios (id_alojamiento, id_VA, id_Transporte, id_Excurcion, precio)
         VALUES (NULL, NULL, id_Transporte, NULL, precio);
-    ELSE
-        RAISE EXCEPTION 'El id de transporte no existe';
-    END IF;
+        COMMIT;
+    EXCEPTION
+        WHEN foreign_key_violation THEN
+            RAISE EXCEPTION 'El id de transporte no existe';
+
+        WHEN others THEN
+            RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+    END;
 END;
 $$;
+
