@@ -189,10 +189,28 @@ FOR EACH ROW
 EXECUTE FUNCTION eliminar_servicios_sin_tipo_servicio();
 /*trigger que le asigna el precio a itemproducto cuando se crea o modifica una fila
 */
+CREATE OR REPLACE FUNCTION "ISFPP2024".agregar_precio_reserva_servicio()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
+DECLARE
+    nuevo_precio NUMERIC(40,2);
+BEGIN
+    -- Obtener el precio del servicio
+    SELECT precio INTO nuevo_precio
+    FROM servicios
+    WHERE id_servicio = NEW.id_servicio
+    LIMIT 1;  -- Asegurarse de obtener solo un resultado
 
-
-CREATE OR REPLACE FUNCTION agregar_precio_paquete_servicio()
-RETURNS TRIGGER AS $$
+    -- Verificar si se encontró el servicio
+    CREATE OR REPLACE FUNCTION "ISFPP2024".agregar_precio_paquete_servicio()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
 DECLARE
  nuevo_precio NUMERIC(40,2);
 BEGIN
@@ -203,14 +221,62 @@ BEGIN
     LIMIT 1;  -- Asegurarse de obtener solo un resultado
 
     -- Actualizar el precio en item_paquetes
-    UPDATE item_reserva
+    UPDATE item_paquete
     SET precio = nuevo_precio 
-    WHERE id_servicio = NEW.id_servicio;
+    WHERE id_servicio = NEW.id_servicio and id_paquete=new.id_paquete;
   	 RETURN NEW;
+EXCEPTION WHEN NO_DATA_FOUND THEN
+    RAISE NOTICE 'No se encontró el id_servicio % en la tabla servicios', NEW.id_servicio;
+    RETURN NEW;
+WHEN OTHERS THEN
+    RAISE EXCEPTION 'Ocurrió un error: %', SQLERRM;
 END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_agregar_item_reserva
-AFTER INSERT OR UPDATE On item_reserva
+$BODY$;
+CREATE TRIGGER trigger_agregar_precio_paquete_servicio
+AFTER INSERT ON item_paquete
 FOR EACH ROW
-EXECUTE FUNCTION agregar_precio_paquete_servicio();
+EXECUTE FUNCTION "ISFPP2024".agregar_precio_paquete_servicio();
+
+
+/*trigger que le asigna el precio a itemreserva cuando se crea o modifica una fila
+*/
+
+CREATE OR REPLACE FUNCTION "ISFPP2024".agregar_precio_reserva_servicio()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
+DECLARE
+    nuevo_precio NUMERIC(40,2);
+BEGIN
+    -- Obtener el precio del servicio
+    SELECT precio INTO nuevo_precio
+    FROM servicios
+    WHERE id_servicio = NEW.id_servicio
+    LIMIT 1;  -- Asegurarse de obtener solo un resultado
+
+    -- Verificar si se encontró el servicio
+    IF NOT FOUND THEN
+        RAISE NOTICE 'No se encontró el id_servicio % en la tabla servicios', NEW.id_servicio;
+        RETURN NEW;
+    END IF;
+
+    -- Actualizar el precio en item_reserva
+    UPDATE item_reserva
+    SET precio = nuevo_precio
+    WHERE id_servicio = NEW.id_servicio AND id_reserva = NEW.reserva;
+
+    RETURN NEW;
+
+EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'Ocurrió un error: %', SQLERRM;
+END;
+$BODY$;
+cREATE TRIGGER trigger_agregar_precio_reserva_servicio
+AFTER INSERT ON item_reserva
+FOR EACH ROW
+EXECUTE FUNCTION "ISFPP2024".agregar_precio_reserva_servicio();
+
+
+
