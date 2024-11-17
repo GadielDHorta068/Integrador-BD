@@ -265,7 +265,7 @@ BEGIN
     -- Actualizar el precio en item_reserva
     UPDATE item_reserva
     SET precio = nuevo_precio
-    WHERE id_servicio = NEW.id_servicio AND id_reserva = NEW.reserva;
+    WHERE id_servicio = NEW.id_servicio AND id_reserva = NEW.id_reserva;
 
     RETURN NEW;
 
@@ -273,7 +273,7 @@ EXCEPTION WHEN OTHERS THEN
     RAISE EXCEPTION 'Ocurrió un error: %', SQLERRM;
 END;
 $BODY$;
-cREATE TRIGGER trigger_agregar_precio_reserva_servicio
+CREATE TRIGGER trigger_agregar_precio_reserva_servicio
 AFTER INSERT ON item_reserva
 FOR EACH ROW
 EXECUTE FUNCTION "ISFPP2024".agregar_precio_reserva_servicio();
