@@ -288,17 +288,29 @@ Vista: vw_clientes_calificaciones
 Propósito: Muestra las calificaciones dadas por los clientes.
 
 Columnas:
+<<<<<<< HEAD
 Cliente: Nombre del cliente.
 Puntaje: Puntaje del servicio.
 Detalles_Servicio: Detalle del servicio calificado.
+=======
+nombre: Nombre del cliente.
+puntaje: Puntaje dado.
+id_servicio: ID del servicio calificado.
+>>>>>>> a25090f (actualizadas vistas)
 
 */
 
 CREATE OR REPLACE VIEW "ISFPP2024".vw_clientes_calificaciones AS
 SELECT
+<<<<<<< HEAD
     c.nombre AS Cliente,
     cal.puntaje AS Puntaje,
     vs.detalles AS Detalles_Servicio
+=======
+	c.nombre as Cliente,
+    cal.puntaje as Puntaje,
+    cal.nombre as Servicio
+>>>>>>> a25090f (actualizadas vistas)
 FROM
     "ISFPP2024".calificaciones cal
 JOIN
