@@ -124,3 +124,46 @@ BEGIN
 END $$;
 -- se llama asi
 SELECT * FROM "ISFPP2024".sp_servicios_por_reserva(10);
+
+
+
+/*
+Funcion: fc_opiniones_servicio
+
+Propósito: Devuelve las calificiaciones y los detalles de un servicio
+
+Retorno: Devuelve una tabla
+
+Logica:
+*/
+
+CREATE OR REPLACE FUNCTION "ISFPP2024".fc_opiniones_servicio(
+    servicio_buscar INTEGER
+)
+RETURNS TABLE (
+    Servicio TEXT,
+    Nombre VARCHAR(30),
+    Detalle VARCHAR(50),
+    Puntaje SMALLINT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF servicio_buscar IS NULL THEN
+        RAISE EXCEPTION 'No se encuentra servicio con la id: %', servicio_buscar;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        sv.nombre   AS Servicio,
+        cl.nombre   AS Nombre,
+        cal.detalle AS Detalle,
+        cal.puntaje AS Puntaje
+    FROM "ISFPP2024".calificaciones cal
+    JOIN "ISFPP2024".servicios sv
+        ON cal.id_servicio = sv.id_servicio
+    JOIN "ISFPP2024".clientes cl
+        ON cal.id_cliente = cl.dni
+    WHERE sv.id_servicio = servicio_buscar;
+END;
+$$;
