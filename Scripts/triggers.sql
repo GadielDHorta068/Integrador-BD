@@ -247,7 +247,7 @@ BEGIN
     LIMIT 1;
 
     -- Actualizar el precio en reservas_servicios
-    UPDATE "ISFPP2024".reservas_servicios
+    UPDATE "ISFPP2024".item_reserva
     SET precio = nuevo_precio
     WHERE id_reserva = NEW.id_reserva AND id_servicio = NEW.id_servicio;
 
