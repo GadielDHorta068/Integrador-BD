@@ -242,32 +242,27 @@ DECLARE
 BEGIN
     -- Obtener el precio del servicio
     SELECT precio INTO nuevo_precio
-    FROM servicios
+    FROM "ISFPP2024".servicios
     WHERE id_servicio = NEW.id_servicio
-    LIMIT 1;  -- Asegurarse de obtener solo un resultado
+    LIMIT 1;
 
-    -- Verificar si se encontró el servicio
-    IF NOT FOUND THEN
-        RAISE NOTICE 'No se encontró el id_servicio % en la tabla servicios', NEW.id_servicio;
-        RETURN NEW;
-    END IF;
-
-    -- Actualizar el precio en item_reserva
-    UPDATE item_reserva
+    -- Actualizar el precio en reservas_servicios
+    UPDATE "ISFPP2024".reservas_servicios
     SET precio = nuevo_precio
-    WHERE id_servicio = NEW.id_servicio AND id_reserva = NEW.id_reserva;
+    WHERE id_reserva = NEW.id_reserva AND id_servicio = NEW.id_servicio;
 
     RETURN NEW;
-
-EXCEPTION WHEN OTHERS THEN
+EXCEPTION WHEN NO_DATA_FOUND THEN
+    RAISE NOTICE 'No se encontró el id_servicio % en la tabla servicios', NEW.id_servicio;
+    RETURN NEW;
+WHEN OTHERS THEN
     RAISE EXCEPTION 'Ocurrió un error: %', SQLERRM;
 END;
 $BODY$;
 
-CREATE TRIGGER trigger_agregar_precio_reserva_servicio
-AFTER INSERT ON item_reserva
-FOR EACH ROW
-EXECUTE FUNCTION "ISFPP2024".agregar_precio_reserva_servicio();
+ALTER FUNCTION "ISFPP2024".agregar_precio_reserva_servicio()
+    OWNER TO estudiante;
+
 
 
 
