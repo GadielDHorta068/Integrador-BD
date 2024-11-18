@@ -404,3 +404,66 @@ s.costo AS precio_seguro
 FROM seguroviaje s JOIN adicionales_paquete i ON s.id_seguro = i.id_seguro
 JOIN paquetes pq ON i.id_paquete = pq.id_paquete;
 
+/*
+Vista: vw_servicios_por_reserva
+
+Propósito:
+Muestra los servicios asociados a las reservas realizadas en el sistema. 
+Proporciona información detallada sobre el precio de los servicios, el tipo y otros detalles relevantes.
+
+Columnas:
+    id_reserva: Identificador único de la reserva.
+    precio: Precio del ítem asociado a la reserva.
+    tipo_de_servicio: Tipo del servicio asociado al ítem de la reserva (por ejemplo, alojamiento, transporte).
+    detalles: Información adicional o descripción del servicio.
+*/
+create view  "ISFPP2024".vw_servicios_por_reserva as
+select r.id_reserva,i.precio,v.tipo_de_servicio,v.detalles
+from "ISFPP2024".item_reserva i
+join "ISFPP2024".reservas r on r.id_reserva=i.id_reserva
+JOIN   "ISFPP2024".vw_servicios v ON  v.id_del_servicio= i.id_servicio
+order by id_reserva
+	/*
+Vista: vw_seguro_por_paquete
+
+Propósito:
+Proporciona un listado detallado de los seguros asociados a los paquetes turísticos. 
+Incluye información relevante como el nombre del paquete, el tipo de seguro, la cobertura y el precio del seguro.
+
+Columnas:
+    nombre_paquete: Nombre del paquete turístico.
+    tipo_seguro: Tipo de seguro asociado al paquete (por ejemplo, seguro de viaje, seguro médico).
+    cobertura: Descripción de la cobertura proporcionada por el seguro.
+    precio_seguro: Costo del seguro asociado al paquete.
+
+
+*/
+
+create view   "ISFPP2024".vw_seguro_por_paquete as
+select pa.nombre_paquete,s.tipo_seguro,s.cobertura,a.precio as precio_seguro
+from "ISFPP2024".adicionales_paquete a
+join "ISFPP2024".paquetes pa on pa.id_paquete=a.id_paquete
+JOIN   "ISFPP2024".seguroviaje s ON  s.id_seguro= a.id_seguro
+order by nombre_paquete
+
+/*
+Vista: vw_seguro_por_reserva
+
+Propósito:
+Proporciona un listado de los seguros asociados a las reservas. 
+Incluye información relevante como el identificador de la reserva, el tipo de seguro, su cobertura y el costo del seguro.
+
+Columnas:
+    id_reserva: Identificador único de la reserva.
+    tipo_seguro: Tipo de seguro asociado a la reserva (por ejemplo, seguro de viaje, seguro médico).
+    cobertura: Detalle de la cobertura proporcionada por el seguro.
+    precio_seguro: Costo del seguro asociado a la reserva.
+*/
+
+	create view   "ISFPP2024".vw_seguro_por_reserva as
+	select r.id_reserva,s.tipo_seguro,s.cobertura,a.precio as precio_seguro
+	from "ISFPP2024".adicionales_reserva a
+	join "ISFPP2024".reservas r on r.id_reserva=a.id_reserva
+	JOIN   "ISFPP2024".seguroviaje s ON  s.id_seguro= a.id_seguro
+	order by id_reserva
+
