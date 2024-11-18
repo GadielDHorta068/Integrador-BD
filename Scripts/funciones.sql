@@ -90,3 +90,37 @@ BEGIN
     RETURN contador;
 END;
 $$;
+/*
+Función: sf_servicios_por_reserva
+
+Propósito: Recupera los servicios asociados a una reserva específica.
+
+Parámetros:
+    reserva_a_buscar: El ID de la reserva para la cual se desea obtener los servicios.
+
+Columnas devueltas:
+    tipo_de_servicio: Tipo de servicio asociado a la reserva.
+    detalles: Detalles del servicio asociado a la reserva.
+    precio: Precio del servicio asociado a la reserva.
+*/
+
+CREATE OR REPLACE FUNCTION "ISFPP2024".sf_servicios_por_reserva(IN reserva_a_buscar INTEGER)
+RETURNS TABLE(tipo_de_servicio TEXT, detalles TEXT,precio double precision) 
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NOT EXISTS (
+        SELECT 1
+        FROM "ISFPP2024".vw_servicios_por_reserva r
+        WHERE r.id_reserva = reserva_a_buscar
+    ) THEN
+        RAISE EXCEPTION 'No se encontraron servicios para la reserva con id_reserva: %', reserva_a_buscar;
+    END IF;
+    RETURN QUERY
+    SELECT r.tipo_de_servicio, r.detalles,r.precio
+    FROM "ISFPP2024".vw_servicios_por_reserva r
+    WHERE r.id_reserva = reserva_a_buscar ;
+
+END $$;
+-- se llama asi
+SELECT * FROM "ISFPP2024".sp_servicios_por_reserva(10);
