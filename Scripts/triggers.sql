@@ -263,6 +263,64 @@ $BODY$;
 ALTER FUNCTION "ISFPP2024".agregar_precio_reserva_servicio()
     OWNER TO estudiante;
 
+/*
+Trigger: trg_agregar_adicionales_paquete
 
+Función Asociada: agregar_precio_adicionales_paquete
+Propósito: agrega precio del seguro a adicionales paquete
+*/
 
+CREATE OR REPLACE FUNCTION agregar_precio_adicionales_paquete()
+RETURNS TRIGGER AS $$
+DECLARE
+ nuevo_precio NUMERIC(40,2);
+BEGIN
+    SELECT precio INTO nuevo_precio
+    FROM segurosviaje
+    WHERE id_seguro = NEW.id_seguro
+    LIMIT 1;
 
+    UPDATE adicionales_paquete
+    SET precio = nuevo_precio
+    WHERE id_seguro = NEW.id_seguro AND id_paquete = NEW.id_paquete;
+
+    RETURN NEW;
+
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_agregar_adicionales_paquete
+AFTER INSERT OR UPDATE On adicionales_paquete
+FOR EACH ROW
+EXECUTE FUNCTION agregar_precio_adicionales_paquete();
+
+/*
+Trigger: trg_agregar_adicionales_reserva
+
+Función Asociada: agregar_precio_adicionales_reserva
+Propósito: agrega precio del seguro a adicionales reserva
+*/
+
+CREATE OR REPLACE FUNCTION agregar_precio_adicionales_reserva()
+RETURNS TRIGGER AS $$
+DECLARE
+ nuevo_precio NUMERIC(40,2);
+BEGIN
+
+    SELECT costo INTO nuevo_precio
+    FROM "ISFPP2024".seguroviaje
+    WHERE id_seguro = NEW.id_seguro
+    LIMIT 1;
+
+    UPDATE "ISFPP2024".adicionales_reserva
+    SET precio = nuevo_precio
+    WHERE id_seguro = NEW.id_seguro;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_agregar_adicionales_reserva
+AFTER INSERT OR UPDATE On adicionales_reserva
+FOR EACH ROW
+EXECUTE FUNCTION agregar_precio_adicionales_reserva();
