@@ -518,7 +518,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 /*
-Procedimiento: sp_borrar_adicional
+Procedimiento: sp_eliminar_adicional
 
 Propósito: Elimina un adicional de la tabla adicionales_seguro.
 Parámetros:
@@ -527,7 +527,7 @@ id_reserva: ID de la reserva.
 
 Lógica: Verifica la existencia del seguro y reserva antes de eliminar el adicional.
 */
-CREATE OR REPLACE PROCEDURE sp_borrar_adicional(id_seguro INTEGER, id_reserva INTEGER)
+CREATE OR REPLACE PROCEDURE sp_eliminar_adicional(id_seguro INTEGER, id_reserva INTEGER)
 LANGUAGE plpgsql
 AS $$
 BEGIN
