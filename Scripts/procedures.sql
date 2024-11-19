@@ -1,32 +1,5 @@
 /*
-Procedimiento: sp_insertar_adicionales_seguro
-
-Propósito: Inserta un nuevo adicional de seguro en la tabla adicionales_paquete.
-
-Parámetros:
-id_paqueteS: ID del paquete.
-id_seguroS: ID del seguro.
-
-Lógica: Verifica la existencia del paquete y seguro antes de insertar el adicional.
-
-*/
-CREATE or replace PROCEDURE sp_insertar_adicionales_seguro( id_paqueteS INTEGER,id_seguroS INTEGER)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM paquetes WHERE id_paquetes = id_paqueteS) THEN
-        RAISE EXCEPTION 'El servicio con ID % no está activo o no existe ', id_paquete;
-    END IF;
-	IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguroS) THEN
-        RAISE EXCEPTION 'El paquete con la ID % no existe', id_seguro;
-    END IF;
-
-    INSERT INTO adicionales_paquete( id_seguro,id_reserva)
-    VALUES (id_paqueteS, id_reserva);
-END;$$;
-
-/*
-sp_modificar_adicionales_seguro
+sp_modificar_adicionales_paqute_seguro
 
 Propósito: Modifica un adicional de seguro en la tabla adicionales_paquete.
 
@@ -42,7 +15,7 @@ Verifica si ambos id_seguro_old y id_seguro_new existen en la tabla seguroViaje.
 
 Inserta un nuevo registro en la tabla adicionales_paquete con el id_paquete, id_reserva, y precio proporcionados.
 */
-CREATE OR REPLACE PROCEDURE sp_modificar_adicionales_seguro(id_paquete INTEGER, id_seguro_old INTEGER, id_seguro_new INTEGER)
+CREATE OR REPLACE PROCEDURE sp_modificar_adicionales_paqute_seguro(id_paquete INTEGER, id_seguro_old INTEGER, id_seguro_new INTEGER)
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -158,7 +131,7 @@ END;
 $$;
 
 /*
-Procedimiento: sp_eliminar_adicionales
+Procedimiento: sp_eliminar_adicionales_paquete
 
 Propósito: Elimina un adicional de seguro de la tabla adicionales_paquete.
 
@@ -168,7 +141,7 @@ id_seguro: ID del seguro.
 
 Lógica: Verifica la existencia del paquete y seguro antes de eliminar el adicional.
 */
-CREATE or replace PROCEDURE sp_modificar_adicionales_precio( id_paquete INTEGER,id_seguro INTEGER)
+CREATE or replace PROCEDURE sp_eliminar_adicionales_paquete( id_paquete INTEGER,id_seguro INTEGER)
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -178,7 +151,34 @@ BEGIN
 	IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguro) THEN
         RAISE EXCEPTION 'El paquete con la ID % no existe', id_seguro;
     END IF;
-	   delete from adicionales_paquete 	WHERE id_seguro=id_seguro and id_paquetes=id_paquete;
+	   DELETE from adicionales_paquete 	
+	   WHERE id_seguro = $2 and id_paquetes = $1;
+
+END;$$;
+
+/*
+Procedimiento: sp_eliminar_adicionales_reserva
+
+Propósito: Elimina un adicional de seguro de la tabla adicionales_paquete.
+
+Parámetros:
+id_paquete: ID del paquete.
+id_seguro: ID del seguro.
+
+Lógica: Verifica la existencia del paquete y seguro antes de eliminar el adicional.
+*/
+CREATE or replace PROCEDURE sp_eliminar_adicionales_reserva( id_reserva INTEGER,id_seguro INTEGER)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM reservas WHERE id_reserva = $1) THEN
+        RAISE EXCEPTION 'El servicio con ID % no está activo o no existe ', id_paquete;
+    END IF;
+	IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = $2) THEN
+        RAISE EXCEPTION 'El paquete con la ID % no existe', id_seguro;
+    END IF;
+	   DELETE from adicionales_reserva	
+	   WHERE id_seguro = $2 and id_reserva = $1;
 
 END;$$;
 
@@ -466,29 +466,54 @@ END;
 $$;
 
 /*
-Procedimiento: sp_insertar_adicionalCrear un nuevo adicional
+Procedimiento: sp_insertar_adicionales_paquete Crear un nuevo adicional
+
+Propósito: Inserta un nuevo adicional en la tabla adicionales_seguro.
+
+Parámetros:
+id_seguroS: ID del seguro.
+id_paqueteS: ID de la paquete.
+
+Lógica: Verifica la existencia del seguro y reserva antes
+*/
+CREATE OR REPLACE PROCEDURE sp_insertar_adicionales_paquete(id_paqueteS INTEGER, id_seguroS INTEGER)
+AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM paquetes WHERE id_paquetes = id_paqueteS) THEN
+        RAISE EXCEPTION 'El servicio con ID % no está activo o no existe ', id_paquete;
+    END IF;
+	IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguroS) THEN
+        RAISE EXCEPTION 'El paquete con la ID % no existe', id_seguro;
+    END IF;
+
+    INSERT INTO adicionales_paquete( id_seguro,id_paquete)
+    VALUES (id_seguroS, id_paqueteS);
+END;
+$$ LANGUAGE plpgsql;
+
+/*
+Procedimiento: sp_insertar_adicionales_reserva Crear un nuevo adicional
 
 Propósito: Inserta un nuevo adicional en la tabla adicionales_seguro.
 
 Parámetros:
 id_seguro: ID del seguro.
 id_reserva: ID de la reserva.
-precio: Precio del adicional.
 
 Lógica: Verifica la existencia del seguro y reserva antes
 */
-CREATE OR REPLACE PROCEDURE sp_insertar_adicional(id_seguro INTEGER, id_reserva INTEGER, precio numeric)
+CREATE OR REPLACE PROCEDURE sp_insertar_adicionales_reserva(id_seguroS INTEGER, id_reservaS INTEGER, precio numeric)
 AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM "ISFPP2024".seguroviaje WHERE id_seguro = id_seguro) THEN
-        RAISE EXCEPTION 'El seguro con ID % no está activo o no existe', id_seguro;
+    IF NOT EXISTS (SELECT 1 FROM reservas WHERE id_reserva = id_reservaS) THEN
+        RAISE EXCEPTION 'El servicio con ID % no está activo o no existe ', id_paquete;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM "ISFPP2024".reservas WHERE id_reserva = id_reserva) THEN
-        RAISE EXCEPTION 'La reserva con la ID % no existe', id_reserva;
+	IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguroS) THEN
+        RAISE EXCEPTION 'El paquete con la ID % no existe', id_seguro;
     END IF;
 
-    INSERT INTO "ISFPP2024".adicionales_seguro (id_seguro, id_reserva)
-    VALUES (id_seguro, id_reserva);
+    INSERT INTO adicionales_reserva( id_seguro,id_reserva)
+    VALUES (id_paqueteS, id_reservaS);
 END;
 $$ LANGUAGE plpgsql;
 
