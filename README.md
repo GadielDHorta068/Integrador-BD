@@ -34,19 +34,19 @@ La tarea de nuestro grupo, denominado **Grupo Rosa**, incluyó el diseño de var
 **Personal**: Se debe mantener registro de la información sobre los empleados de la empresa, incluyendo nombres, roles y datos de contacto. Algunos estarán asignados a reservas y registra su tipo de participación (agente de reserva, guía turístico, chofer, etc.).
 
 **Calificaciones**:
-La tabla Calificaciones permite a los clientes calificar los servicios ofrecidos por la empresa, registrando un puntaje (del 1 al 10) y una breve reseña (máximo 50 caracteres) sobre el servicio recibido.
+La tabla Calificaciones permite a los clientes calificar los `servicios` ofrecidos por la empresa, registrando un puntaje (del 1 al 10) y una breve reseña (máximo 50 caracteres) sobre el servicio recibido.
 
 **Servicios**:
 La tabla Servicios gestiona la información de los servicios ofrecidos, relacionados con diferentes tipos de actividades como alquiler de vehículos, transporte, excursiones y alojamiento. Cada servicio tiene un identificador único y se asocia a uno de los tipos mencionados. La restricción en la tabla asegura que solo uno de los campos de referencia (ID_Vehiculo_alquiler, ID_Transporte, ID_excursion, ID_alojamiento) pueda estar presente en un servicio en particular, lo que permite garantizar que cada servicio esté relacionado de manera exclusiva con un tipo específico.
 
 **Adicionales de Paquete**:
-La tabla adicionales_paquete es la tabla intermedia entre la  seguros_viaje.  Cada registro contiene un identificador de paquete, un identificador de seguro y el precio del adicional. Se asegura que tanto el paquete como el seguro existan en sus respectivas tablas (paquetes y seguroViaje) mediante claves foráneas. Y por medio de un trigger.
+La tabla adicionales_paquete es la tabla intermedia entre la  `seguros_viaje`.  Cada registro contiene un identificador de paquete, un identificador de seguro y el precio del adicional. Se asegura que tanto el paquete como el seguro existan en sus respectivas tablas (paquetes y seguroViaje) mediante claves foráneas. Y por medio de un trigger.
 
 **Adicionales de Reserva**:
-La tabla adicionales_reserva gestiona los adicionales de seguros asociados a las reservas. Cada registro incluye un identificador de seguro, un identificador de reserva y el precio del seguro adicional. Las claves foráneas aseguran que tanto el seguro como la reserva existan en sus respectivas tablas (SeguroViaje y Reservas). 
+La tabla `adicionales_reserva` gestiona los adicionales de seguros asociados a las reservas. Cada registro incluye un identificador de seguro, un identificador de reserva y el precio del seguro adicional. Las claves foráneas aseguran que tanto el seguro como la reserva existan en sus respectivas tablas (`SeguroViaje` y `Reservas`). 
 
 **Ítem reserva**:
-Cada servicio asociado a una reserva es registrado en la tabla item_reserva. Esta tabla mantiene el precio del servicio para la reserva específica y asegura que cada servicio se encuentre vinculado correctamente a una reserva existente.
+Cada servicio asociado a una reserva es registrado en la tabla `item_reserva`. Esta tabla mantiene el precio del servicio para la reserva específica y asegura que cada servicio se encuentre vinculado correctamente a una reserva existente.
 
 ---
 
