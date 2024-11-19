@@ -150,14 +150,20 @@ CREATE TABLE"ISFPP2024".adicionales_reserva
 
 
 
+
 CREATE TABLE IF NOT EXISTS "ISFPP2024".item_reserva
 (
-    id_servicio smallint,
-    id_reserva smallint,
+    id_servicio smallint NOT NULL,
+    id_reserva smallint NOT NULL,
     precio double precision,
-    CONSTRAINT paquete_reserva_constraint FOREIGN KEY (id_reserva)
+    CONSTRAINT fk_item_reserva PRIMARY KEY (id_servicio, id_reserva),
+    CONSTRAINT fk_item_reserva_id_reserva FOREIGN KEY (id_reserva)
         REFERENCES "ISFPP2024".reservas (id_reserva) MATCH SIMPLE
         ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT fk_item_reserva_id_servicio FOREIGN KEY (id_servicio)
+        REFERENCES "ISFPP2024".servicios (id_servicio) MATCH SIMPLE
+        ON UPDATE NO ACTION
         ON DELETE NO ACTION
-)
+);
 
