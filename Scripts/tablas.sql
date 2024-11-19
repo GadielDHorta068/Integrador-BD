@@ -122,13 +122,22 @@ id_seguro: Clave foránea que referencia a SeguroViaje(id_seguro).
 id_reserva: Clave foránea que referencia a Reservas(id_reserva).
 precio: Columna de tipo numeric(40,2) que no permite valores nulos y debe ser mayor a 0.
 */
-CREATE TABLE  adicionales_reserva (
-    id_seguro SMALLINT,
-	id_reserva SMALLINT,
-    precio numeric(40,2) not  NULL check (precio>0),
-	CONSTRAINT seguro_reserva_constraint  FOREIGN KEY (id_reserva) REFERENCES Reservas(id_reserva),
-	constraint adicional_seguro_constraint foreign key (id_seguro) references SeguroViaje(id_seguro)
-);
+CREATE TABLE"ISFPP2024".adicionales_reserva
+(
+    id_seguro smallint NOT NULL,
+    id_reserva smallint NOT NULL,
+    precio numeric(40,2) NOT NULL,
+    CONSTRAINT adicionales_reserva_pkey PRIMARY KEY (id_seguro, id_reserva),
+    CONSTRAINT fk_adicionales_reserva_id_reserva FOREIGN KEY (id_reserva)
+        REFERENCES "ISFPP2024".reservas (id_reserva) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT fk_adicionales_reserva_id_seguro FOREIGN KEY (id_seguro)
+        REFERENCES "ISFPP2024".seguroviaje (id_seguro) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT adicionales_reserva_precio_check CHECK (precio > 0::numeric)
+)
 
 
 
