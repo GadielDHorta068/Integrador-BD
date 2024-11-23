@@ -324,3 +324,34 @@ CREATE TRIGGER trg_agregar_adicionales_reserva
 AFTER INSERT OR UPDATE On adicionales_reserva
 FOR EACH ROW
 EXECUTE FUNCTION agregar_precio_adicionales_reserva();
+
+
+/*
+Trigger: tr_validar_cliente_califica
+
+Función Asociada: validar_cliente_puede_calificar
+Propósito: verifica que la calificacion dada por un cliente sea valida
+*/
+CREATE OR REPLACE FUNCTION validar_cliente_puede_calificar()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Verificar que el cliente tiene un viaje finalizado
+    IF NOT EXISTS (
+        SELECT 1
+        FROM "ISFPP2024".reservas r
+        WHERE r.dni_cliente = NEW.id_cliente
+			AND r.estado = 1
+          	AND r.fin_viaje < NOW()
+    ) THEN
+        RAISE EXCEPTION 'El cliente no puede calificar porque no tiene viajes finalizados';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+--trigger en la tabla calificaciones
+CREATE TRIGGER tr_validar_cliente_califica
+BEFORE INSERT OR UPDATE ON calificaciones
+FOR EACH ROW
+EXECUTE FUNCTION validar_cliente_puede_calificar();
