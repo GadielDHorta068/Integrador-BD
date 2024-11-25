@@ -179,3 +179,5 @@ El proyecto ofreció una experiencia similar a un entorno laboral real, siendo e
    Actualmente es solo descriptivo; debería determinar permisos y privilegios para establecer un control más detallado sobre las acciones que cada miembro puede realizar.
 
 ---
+
+![image](https://github.com/user-attachments/assets/8f53d00d-966b-47ea-b299-73eda9b27ce1)
