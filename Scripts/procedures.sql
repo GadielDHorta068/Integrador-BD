@@ -236,8 +236,18 @@ LANGUAGE plpgsql
 AS $$
 declare
 begin
+	IF rol IS NULL OR rol = '' THEN
+    RAISE EXCEPTION 'El nombre no puede estar vacío';
+	END IF;	
+	IF nombre IS NULL OR nombre = '' THEN
+    RAISE EXCEPTION 'El nombre no puede estar vacío';
+	END IF;
+	IF apellido IS NULL OR apellido = '' THEN
+    RAISE EXCEPTION 'El apellido no puede estar vacío';
+	END IF;
+
     BEGIN
-    INSERT INTO personal (dni_personal,rol,salario,nombre,apellido)
+    INSERT INTO "ISFPP2024".personal (dni_personal,rol,salario,nombre,apellido)
     VALUES (dni , INITCAP(rol) ,salario, INITCAP(nombre), INITCAP(apellido));
 EXCEPTION
     WHEN others THEN
