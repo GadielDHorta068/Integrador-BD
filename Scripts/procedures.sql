@@ -15,31 +15,82 @@ Verifica si ambos id_seguro_old y id_seguro_new existen en la tabla seguroViaje.
 
 Inserta un nuevo registro en la tabla adicionales_paquete con el id_paquete, id_reserva, y precio proporcionados.
 */
-CREATE OR REPLACE PROCEDURE sp_modificar_adicionales_paqute_seguro(id_paquete INTEGER, id_seguro_old INTEGER, id_seguro_new INTEGER)
+CREATE OR REPLACE PROCEDURE sp_modificar_adicionales_paquete_seguro(id_paquete INTEGER, id_seguro_old INTEGER, id_seguro_new INTEGER)
 LANGUAGE plpgsql
 AS $$
 BEGIN
     -- Validar que el paquete existe
-    IF NOT EXISTS (SELECT 1 FROM adicionales_paquete WHERE id_paquete = $1) THEN
+    IF NOT EXISTS (SELECT 1 FROM adicionales_paquete p WHERE p.id_paquete = $1) THEN
         RAISE EXCEPTION 'El paquete con ID % no está activo o no existe', id_paquete;
     END IF;
 
     -- Validar que los seguros existen
-    IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguro_old) THEN
+    IF NOT EXISTS (SELECT 1 FROM seguroViaje s WHERE s.id_seguro = id_seguro_old) THEN
         RAISE EXCEPTION 'El seguro antiguo con ID % no existe', id_seguro_old;
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM seguroViaje WHERE id_seguro = id_seguro_new) THEN
+    IF NOT EXISTS (SELECT 1 FROM seguroViaje s WHERE s.id_seguro = id_seguro_new) THEN
         RAISE EXCEPTION 'El seguro nuevo con ID % no existe', id_seguro_new;
     END IF;
 
     -- Actualizar el seguro en la tabla de adicionales
-    UPDATE adicionales_paquete
-    SET id_seguro = id_seguro_new
-    WHERE id_seguro = id_seguro_old AND id_paquete = $1;
+    UPDATE adicionales_paquete ap
+    SET ap.id_seguro = id_seguro_new
+    WHERE ap.id_seguro = id_seguro_old AND ap.id_paquete = $1;
 
     -- Mensaje de confirmación
     RAISE NOTICE 'El seguro % fue reemplazado por el seguro % en el paquete %', id_seguro_old, id_seguro_new, id_paquete;
+
+EXCEPTION
+    WHEN foreign_key_violation THEN
+        RAISE EXCEPTION 'Error: Se produjo una violación de clave foránea.';
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Ocurrió un error durante la operación: %', SQLERRM;
+END;
+$$;
+
+/*
+sp_modificar_adicionales_reserva_seguro
+
+Propósito: Modifica un adicional de seguro en la tabla adicionales_reserva.
+
+Parámetros:
+id_reserva: ID de la reserva a la que pertenece el adicional.
+id_seguro_old: ID del seguro actual que se desea modificar.
+id_seguro_new: Nuevo ID del seguro que reemplazará al actual.
+
+Lógica:
+Verifica si la id_reserva existe en la tabla reserva. Si no existe, lanza una excepción indicando que la reserva no está activa o no existe.
+
+Verifica si ambos id_seguro_old y id_seguro_new existen en la tabla seguroViaje. Si alguno no existe, lanza una excepción indicando que alguna ID de seguro es inválida.
+
+reemplaza el seguro antiguo por el nuevo proporcionado, dentro del adicional correspondiente.
+*/
+CREATE OR REPLACE PROCEDURE sp_modificar_adicionales_reserva_seguro(id_reserva INTEGER, id_seguro_old INTEGER, id_seguro_new INTEGER)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Validar que la reserva existe
+    IF NOT EXISTS (SELECT 1 FROM adicionales_reserva r WHERE r.id_reserva = $1) THEN
+        RAISE EXCEPTION 'El paquete con ID % no está activo o no existe', id_reserva;
+    END IF;
+
+    -- Validar que los seguros existen
+    IF NOT EXISTS (SELECT 1 FROM seguroViaje s WHERE s.id_seguro = id_seguro_old) THEN
+        RAISE EXCEPTION 'El seguro antiguo con ID % no existe', id_seguro_old;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM seguroViaje s WHERE s.id_seguro = id_seguro_new) THEN
+        RAISE EXCEPTION 'El seguro nuevo con ID % no existe', id_seguro_new;
+    END IF;
+
+    -- Actualizar el seguro en la tabla de adicionales
+    UPDATE adicionales_reserva ar
+    SET ar.id_seguro = id_seguro_new
+    WHERE ar.id_seguro = id_seguro_old AND ar.id_paquete = $1;
+
+    -- Mensaje de confirmación
+    RAISE NOTICE 'El seguro % fue reemplazado por el seguro % en la reserva %', id_seguro_old, id_seguro_new, id_reserva;
 
 EXCEPTION
     WHEN foreign_key_violation THEN
