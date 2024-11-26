@@ -68,7 +68,6 @@ Cada servicio asociado a una reserva es registrado en la tabla `item_reserva`. E
 
 ### consideraciones, decisiones y/o limitaciones del sistema
 
-- Algunas de las consideraciones iniciales del proyecto fueron descartadas, como la necesidad de verificar que los `clientes` hayan utilizado un servicio antes de calificarlo. Para simplificar, tomamos como referencia el modelo de reseñas de Google, donde cualquier usuario puede opinar sobre un servicio, independientemente de si lo ha utilizado o no.
 
 - La tabla de `personal` solo permite que los empleados que están asociados directamente con la empresa figuren en la tabla de servicios como encargados. No se permite la tercerización de servicios.
 
