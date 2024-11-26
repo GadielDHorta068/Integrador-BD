@@ -116,6 +116,11 @@ Un procedimiento almacenado en SQL es un conjunto de instrucciones SQL predefini
 
 [Documentación de **Procedimientos**](https://github.com/GadielDHorta068/Integrador-BD/wiki/Procedimientos)
 
+### **Tests **
+
+Los test se realizan una vez completada la implementacion de las funciones, procedimientos, triggers, y toda utilidad que sera usada en la BD durante su uso. Provando casos favorables, desfavorables, y toda aleatoridad para poner a prueba las excepciones, y el correcto andar
+[Guia de TEST a seguir](https://github.com/GadielDHorta068/Integrador-BD/wiki/Test)
+
 ---
 
 ## 5. Experiencia grupal
